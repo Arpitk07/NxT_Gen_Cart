@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "996171163421",
+    "project_id": "nxtgen-cart",
+    "storage_bucket": "nxtgen-cart.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:996171163421:android:925d7f86cb95aa7da3e3f4",
+        "android_client_info": {
+          "package_name": "NxtG_C.C07"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCxD8lxZKShbPWZYwm4zxTLXU7XYj00Uoo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
