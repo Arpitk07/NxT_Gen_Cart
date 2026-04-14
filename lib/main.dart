@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'config/firebase_config.dart';
 import 'providers/cart_provider.dart';
 import 'services/realtime_db_service.dart';
 import 'screens/splash_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await FirebaseConfig.initializeFirebase();
   runApp(const NextGenCartApp());
 }
 

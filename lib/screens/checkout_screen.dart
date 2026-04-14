@@ -30,8 +30,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             content: Text('Checkout failed: $e'),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -56,16 +57,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   color: Colors.green.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.check_circle_rounded,
-                    size: 64, color: Colors.greenAccent),
+                child: const Icon(
+                  Icons.check_circle_rounded,
+                  size: 64,
+                  color: Colors.greenAccent,
+                ),
               ),
               const SizedBox(height: 20),
               Text(
                 'Payment Successful!',
                 style: GoogleFonts.orbitron(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -87,8 +92,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF6C63FF),
                     ),
-                    child: Text('Done',
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                    child: Text(
+                      'Done',
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ),
               ),
@@ -107,11 +114,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       backgroundColor: const Color(0xFF1A1A2E),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1A1A2E),
-        title: Text('Checkout',
-            style: GoogleFonts.orbitron(
-                fontWeight: FontWeight.w700,
-                fontSize: 18,
-                color: Colors.white)),
+        title: Text(
+          'Checkout',
+          style: GoogleFonts.orbitron(
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+            color: Colors.white,
+          ),
+        ),
       ),
       body: Column(
         children: [
@@ -124,96 +134,109 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   message: 'Your order overview',
                   scaleOnHover: 1.02,
                   child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF6C63FF), Color(0xFF533483)],
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF6C63FF), Color(0xFF533483)],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.receipt_long_rounded,
-                          size: 40, color: Colors.white),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Order Summary',
-                        style: GoogleFonts.orbitron(
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.receipt_long_rounded,
+                          size: 40,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Order Summary',
+                          style: GoogleFonts.orbitron(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${cartProvider.itemCount} item${cartProvider.itemCount != 1 ? 's' : ''} in cart',
-                        style: GoogleFonts.poppins(
-                            fontSize: 13, color: Colors.white70),
-                      ),
-                    ],
-                  ),
-                ),                ),                const SizedBox(height: 16),
-
-                // Items List
-                ...cartProvider.items.map((item) {
-                  final status =
-                      ExpiryUtils.getExpiryStatus(item.expiryDate);
-                  final statusColor = ExpiryUtils.getStatusColor(status);
-                  return HoverTooltip(
-                    message: '${item.productName.isNotEmpty ? item.productName : "Unknown"} — Exp: ${item.expiryDate.isNotEmpty ? item.expiryDate : "N/A"}',
-                    scaleOnHover: 1.02,
-                    child: Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.06),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.08)),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Icon(Icons.inventory_2_rounded,
-                              size: 20, color: statusColor),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item.productName.isNotEmpty
-                                    ? item.productName
-                                    : 'Unknown',
-                                style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white),
-                              ),
-                              Text(
-                                'ID: ${item.productId}',
-                                style: GoogleFonts.poppins(
-                                    fontSize: 12, color: Colors.white38),
-                              ),
-                            ],
+                            color: Colors.white,
                           ),
                         ),
+                        const SizedBox(height: 4),
                         Text(
-                          '₹${item.mrp.toStringAsFixed(2)}',
-                          style: GoogleFonts.orbitron(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF6C63FF),
+                          '${cartProvider.totalItems} item${cartProvider.totalItems != 1 ? 's' : ''} in cart',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: Colors.white70,
                           ),
                         ),
                       ],
                     ),
                   ),
+                ),
+                const SizedBox(height: 16),
+
+                // Items List
+                ...cartProvider.items.map((item) {
+                  final status = ExpiryUtils.getExpiryStatus(item.expiry);
+                  final statusColor = ExpiryUtils.getStatusColor(status);
+                  return HoverTooltip(
+                    message:
+                        '${item.name.isNotEmpty ? item.name : "Unknown"} - Exp: ${item.expiry.isNotEmpty ? item.expiry : "N/A"}',
+                    scaleOnHover: 1.02,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.08),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              Icons.inventory_2_rounded,
+                              size: 20,
+                              color: statusColor,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.name.isNotEmpty ? item.name : 'Unknown',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                Text(
+                                  'ID: ${item.id}  •  Qty: ${item.quantity}',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: Colors.white38,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            '₹${(item.price * item.quantity).toStringAsFixed(2)}',
+                            style: GoogleFonts.orbitron(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF6C63FF),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   );
                 }),
 
@@ -228,13 +251,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                   child: Column(
                     children: [
-                      _priceRow('Subtotal',
-                          '₹${cartProvider.totalPrice.toStringAsFixed(2)}'),
+                      _priceRow(
+                        'Subtotal',
+                        '₹${cartProvider.subtotal.toStringAsFixed(2)}',
+                      ),
                       const SizedBox(height: 8),
-                      _priceRow('Tax (0%)', '₹0.00'),
+                      _priceRow(
+                        'Tax (${(cartProvider.taxRate * 100).toStringAsFixed(0)}%)',
+                        '₹${cartProvider.tax.toStringAsFixed(2)}',
+                      ),
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 10),
-                        child: Divider(color: Colors.white.withValues(alpha: 0.1)),
+                        child: Divider(
+                          color: Colors.white.withValues(alpha: 0.1),
+                        ),
                       ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -242,12 +272,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           Text(
                             'Total',
                             style: GoogleFonts.poppins(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white),
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
                           ),
                           Text(
-                            '₹${cartProvider.totalPrice.toStringAsFixed(2)}',
+                            '₹${cartProvider.total.toStringAsFixed(2)}',
                             style: GoogleFonts.orbitron(
                               fontSize: 20,
                               fontWeight: FontWeight.w800,
@@ -261,7 +292,39 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
 
                 // Expiry warning
-                if (cartProvider.hasExpiryWarnings) ...[
+                if (cartProvider.hasExpiredItems) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.red.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.block_rounded,
+                          color: Colors.redAccent,
+                          size: 20,
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Checkout blocked: cart contains expired items.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.redAccent,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else if (cartProvider.hasExpiryWarnings) ...[
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -269,18 +332,24 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       color: Colors.orange.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                          color: Colors.orange.withValues(alpha: 0.3)),
+                        color: Colors.orange.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.warning_amber_rounded,
-                            color: Colors.orange, size: 20),
+                        const Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.orange,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             'Some items are expired or near expiry. Please review before confirming.',
                             style: TextStyle(
-                                fontSize: 12, color: Colors.orange[800]),
+                              fontSize: 12,
+                              color: Colors.orange[800],
+                            ),
                           ),
                         ),
                       ],
@@ -308,26 +377,35 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               child: SizedBox(
                 width: double.infinity,
                 child: HoverTooltip(
-                  message: _isProcessing ? 'Payment in progress' : 'Complete your purchase',
+                  message: _isProcessing
+                      ? 'Payment in progress'
+                      : 'Complete your purchase',
                   scaleOnHover: 1.05,
                   child: FilledButton.icon(
-                    onPressed:
-                        _isProcessing ? null : () => _handleCheckout(cartProvider),
+                    onPressed: _isProcessing || cartProvider.hasExpiredItems
+                        ? null
+                        : () => _handleCheckout(cartProvider),
                     icon: _isProcessing
                         ? const SizedBox(
                             width: 18,
                             height: 18,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
                         : const Icon(Icons.payment_rounded),
                     label: Text(
                       _isProcessing ? 'Processing...' : 'Confirm & Pay',
                       style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w700),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     style: FilledButton.styleFrom(
-                      backgroundColor: Colors.green,
+                      backgroundColor: cartProvider.hasExpiredItems
+                          ? Colors.grey
+                          : Colors.green,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -347,10 +425,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label,
-            style: GoogleFonts.poppins(fontSize: 14, color: Colors.white54)),
-        Text(value,
-            style: GoogleFonts.poppins(fontSize: 14, color: Colors.white)),
+        Text(
+          label,
+          style: GoogleFonts.poppins(fontSize: 14, color: Colors.white54),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.poppins(fontSize: 14, color: Colors.white),
+        ),
       ],
     );
   }

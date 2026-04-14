@@ -12,12 +12,13 @@ class CartItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final expiryStatus = ExpiryUtils.getExpiryStatus(item.expiryDate);
+    final expiryStatus = ExpiryUtils.getExpiryStatus(item.expiry);
     final statusColor = ExpiryUtils.getStatusColor(expiryStatus);
     final statusText = ExpiryUtils.getStatusText(expiryStatus);
 
     return HoverTooltip(
-      message: '${item.productName.isNotEmpty ? item.productName : "Unknown"} \u2014 Tap for details',
+      message:
+          '${item.name.isNotEmpty ? item.name : "Unknown"} - Tap for details',
       scaleOnHover: 1.03,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -26,113 +27,128 @@ class CartItemTile extends StatelessWidget {
           color: Colors.white.withValues(alpha: 0.06),
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
-          onTap: () => _showItemDetails(context, expiryStatus, statusColor, statusText),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.08),
-              ),
+            onTap: () => _showItemDetails(
+              context,
+              expiryStatus,
+              statusColor,
+              statusText,
             ),
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(14),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      _getProductIcon(expiryStatus),
+                      color: statusColor,
+                      size: 26,
+                    ),
                   ),
-                  child: Icon(
-                    _getProductIcon(expiryStatus),
-                    color: statusColor,
-                    size: 26,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              item.productName.isNotEmpty
-                                  ? item.productName
-                                  : 'Unknown Product',
-                              style: GoogleFonts.poppins(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                item.name.isNotEmpty
+                                    ? item.name
+                                    : 'Unknown Product',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          _buildStatusChip(statusText, statusColor),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          const Icon(Icons.qr_code_rounded,
-                              size: 14, color: Colors.white38),
-                          const SizedBox(width: 4),
-                          Text(
-                            item.productId.isNotEmpty
-                                ? item.productId
-                                : 'N/A',
-                            style: GoogleFonts.poppins(
-                                color: Colors.white38, fontSize: 12),
-                          ),
-                          const Spacer(),
-                          Icon(Icons.event_outlined,
-                              size: 14, color: statusColor),
-                          const SizedBox(width: 4),
-                          Text(
-                            item.expiryDate.isNotEmpty
-                                ? item.expiryDate
-                                : 'N/A',
-                            style: GoogleFonts.poppins(
+                            const SizedBox(width: 8),
+                            _buildStatusChip(statusText, statusColor),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.qr_code_rounded,
+                              size: 14,
+                              color: Colors.white38,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              item.id.isNotEmpty ? item.id : 'N/A',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white38,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const Spacer(),
+                            Icon(
+                              Icons.event_outlined,
+                              size: 14,
                               color: statusColor,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            Text(
+                              item.expiry.isNotEmpty ? item.expiry : 'N/A',
+                              style: GoogleFonts.poppins(
+                                color: statusColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              'Qty: ${item.quantity}',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white54,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '₹${(item.price * item.quantity).toStringAsFixed(2)}',
+                        style: GoogleFonts.orbitron(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF6C63FF),
+                        ),
+                      ),
+                      Text(
+                        'Total',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: Colors.white38,
+                        ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '₹${item.mrp.toStringAsFixed(2)}',
-                      style: GoogleFonts.orbitron(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF6C63FF),
-                      ),
-                    ),
-                    Text(
-                      'MRP',
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        color: Colors.white38,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -166,8 +182,12 @@ class CartItemTile extends StatelessWidget {
     }
   }
 
-  void _showItemDetails(BuildContext context, ExpiryStatus status,
-      Color statusColor, String statusText) {
+  void _showItemDetails(
+    BuildContext context,
+    ExpiryStatus status,
+    Color statusColor,
+    String statusText,
+  ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF16213E),
@@ -192,17 +212,31 @@ class CartItemTile extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              item.productName.isNotEmpty ? item.productName : 'Unknown',
+              item.name.isNotEmpty ? item.name : 'Unknown',
               style: GoogleFonts.poppins(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white),
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(height: 16),
-            _detailRow(Icons.qr_code_rounded, 'Product ID', item.productId),
-            _detailRow(Icons.currency_rupee_rounded, 'MRP',
-                '₹${item.mrp.toStringAsFixed(2)}'),
-            _detailRow(Icons.event_outlined, 'Expiry Date', item.expiryDate),
+            _detailRow(Icons.qr_code_rounded, 'Product ID', item.id),
+            _detailRow(
+              Icons.currency_rupee_rounded,
+              'Unit Price',
+              '₹${item.price.toStringAsFixed(2)}',
+            ),
+            _detailRow(
+              Icons.shopping_bag_rounded,
+              'Quantity',
+              '${item.quantity}',
+            ),
+            _detailRow(
+              Icons.currency_rupee_rounded,
+              'Line Total',
+              '₹${(item.price * item.quantity).toStringAsFixed(2)}',
+            ),
+            _detailRow(Icons.event_outlined, 'Expiry Date', item.expiry),
             const SizedBox(height: 12),
             Container(
               width: double.infinity,
@@ -240,15 +274,18 @@ class CartItemTile extends StatelessWidget {
         children: [
           Icon(icon, size: 20, color: Colors.white38),
           const SizedBox(width: 10),
-          Text(label,
-              style: GoogleFonts.poppins(color: Colors.white38, fontSize: 13)),
+          Text(
+            label,
+            style: GoogleFonts.poppins(color: Colors.white38, fontSize: 13),
+          ),
           const Spacer(),
           Text(
             value.isNotEmpty ? value : 'N/A',
             style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-                color: Colors.white),
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+              color: Colors.white,
+            ),
           ),
         ],
       ),

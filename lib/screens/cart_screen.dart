@@ -1,13 +1,87 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../models/cart_item_model.dart';
 import '../providers/cart_provider.dart';
-import '../widgets/cart_item_tile.dart';
+import '../utils/expiry_utils.dart';
 import '../widgets/hover_tooltip.dart';
 import 'checkout_screen.dart';
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
+
+  @override
+  State<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
+  final Set<String> _pendingItemIds = <String>{};
+  bool _isClearing = false;
+
+  Future<void> _runItemAction(
+    String itemId,
+    Future<void> Function() action,
+  ) async {
+    if (_pendingItemIds.contains(itemId)) return;
+
+    setState(() {
+      _pendingItemIds.add(itemId);
+    });
+
+    try {
+      await action();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Action failed: $e')));
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _pendingItemIds.remove(itemId);
+      });
+    }
+  }
+
+  Future<void> _confirmClearCart(CartProvider provider) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF16213E),
+          title: const Text('Clear cart?'),
+          content: const Text('This will remove all items from your cart.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Clear'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isClearing = true);
+    try {
+      await provider.clearCart();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Clear cart failed: $e')));
+    } finally {
+      if (mounted) {
+        setState(() => _isClearing = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,8 +94,11 @@ class CartScreen extends StatelessWidget {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.shopping_cart_rounded,
-                color: Color(0xFF6C63FF), size: 22),
+            const Icon(
+              Icons.shopping_cart_rounded,
+              color: Color(0xFF6C63FF),
+              size: 22,
+            ),
             const SizedBox(width: 8),
             Text(
               'My Cart',
@@ -35,6 +112,26 @@ class CartScreen extends StatelessWidget {
         ),
         actions: [
           Consumer<CartProvider>(
+            builder: (_, cart, __) {
+              final bool disabled =
+                  _isClearing || cart.isLoading || cart.items.isEmpty;
+              return IconButton(
+                tooltip: 'Clear cart',
+                onPressed: disabled ? null : () => _confirmClearCart(cart),
+                icon: _isClearing
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(
+                        Icons.delete_sweep_rounded,
+                        color: Colors.redAccent,
+                      ),
+              );
+            },
+          ),
+          Consumer<CartProvider>(
             builder: (_, cart, __) => Padding(
               padding: const EdgeInsets.only(right: 16),
               child: Center(
@@ -43,8 +140,10 @@ class CartScreen extends StatelessWidget {
                       ? 'Database connection lost'
                       : 'Real-time Firebase sync active',
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: colorScheme.primaryContainer,
                       borderRadius: BorderRadius.circular(20),
@@ -52,11 +151,11 @@ class CartScreen extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.wifi_rounded,
-                            size: 14,
-                            color: cart.error != null
-                                ? Colors.red
-                                : Colors.green),
+                        Icon(
+                          Icons.wifi_rounded,
+                          size: 14,
+                          color: cart.error != null ? Colors.red : Colors.green,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           cart.error != null ? 'Offline' : 'Live',
@@ -106,20 +205,31 @@ class CartScreen extends StatelessWidget {
                         color: Colors.red.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.cloud_off_rounded,
-                          size: 56, color: Colors.red),
+                      child: const Icon(
+                        Icons.cloud_off_rounded,
+                        size: 56,
+                        color: Colors.red,
+                      ),
                     ),
                     const SizedBox(height: 20),
                     const Text(
                       'Connection Failed',
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Unable to reach Firebase database.\nCheck your internet or DB rules.',
+                      'Unable to reach Firebase database. Check your internet or DB rules.',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: cartProvider.retryConnection,
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Retry'),
                     ),
                   ],
                 ),
@@ -135,11 +245,16 @@ class CartScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+                      color: colorScheme.primaryContainer.withValues(
+                        alpha: 0.3,
+                      ),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.remove_shopping_cart_rounded,
-                        size: 56, color: colorScheme.primary),
+                    child: Icon(
+                      Icons.remove_shopping_cart_rounded,
+                      size: 56,
+                      color: colorScheme.primary,
+                    ),
                   ),
                   const SizedBox(height: 20),
                   const Text(
@@ -148,7 +263,7 @@ class CartScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Scan items with your smart trolley\nto see them appear here!',
+                    'Scan items with your smart trolley to see them appear here.',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
@@ -159,23 +274,69 @@ class CartScreen extends StatelessWidget {
 
           return Column(
             children: [
-              // Stats Header
               _buildStatsHeader(context, cartProvider),
-              // Expiry warning banner
               if (cartProvider.hasExpiryWarnings)
                 HoverTooltip(
                   message: 'Review expired or near-expiry items',
                   scaleOnHover: 1.02,
-                  child: _buildWarningBanner(context, cartProvider),
+                  child: _buildWarningBanner(cartProvider),
                 ),
-              // Item list
               Expanded(
                 child: ListView.builder(
                   padding: const EdgeInsets.only(top: 8, bottom: 8),
                   itemCount: cartProvider.items.length,
                   itemBuilder: (context, index) {
                     final item = cartProvider.items[index];
-                    return CartItemTile(item: item, index: index);
+                    final bool busy = _pendingItemIds.contains(item.id);
+
+                    return Dismissible(
+                      key: ValueKey(item.id),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Icon(
+                          Icons.delete_rounded,
+                          color: Colors.white,
+                        ),
+                      ),
+                      confirmDismiss: (_) async => !busy,
+                      onDismissed: (_) {
+                        _runItemAction(
+                          item.id,
+                          () => cartProvider.removeItem(item.id),
+                        );
+                      },
+                      child: _buildCartItemCard(
+                        item: item,
+                        busy: busy,
+                        onDecrement: () => _runItemAction(
+                          item.id,
+                          () => cartProvider.decrementItem(item.id),
+                        ),
+                        onIncrement: () => _runItemAction(
+                          item.id,
+                          () => cartProvider.addOrIncrementItem(
+                            itemId: item.id,
+                            name: item.name,
+                            price: item.price,
+                            expiry: item.expiry,
+                          ),
+                        ),
+                        onDelete: () => _runItemAction(
+                          item.id,
+                          () => cartProvider.removeItem(item.id),
+                        ),
+                      ),
+                    );
                   },
                 ),
               ),
@@ -204,28 +365,28 @@ class CartScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          HoverTooltip(
-            message: 'Total scanned items',
-            child: _statItem(Icons.inventory_2_rounded,
-                '${cartProvider.itemCount}', 'Items'),
+          _statItem(
+            Icons.inventory_2_rounded,
+            '${cartProvider.totalItems}',
+            'Items',
           ),
           Container(width: 1, height: 30, color: Colors.white30),
-          HoverTooltip(
-            message: 'Items with valid expiry',
-            child: _statItem(Icons.check_circle_rounded,
-                '${cartProvider.safeCount}', 'Safe'),
+          _statItem(
+            Icons.check_circle_rounded,
+            '${cartProvider.safeCount}',
+            'Safe',
           ),
           Container(width: 1, height: 30, color: Colors.white30),
-          HoverTooltip(
-            message: 'Items expiring soon',
-            child: _statItem(Icons.access_time_rounded,
-                '${cartProvider.nearExpiryCount}', 'Near'),
+          _statItem(
+            Icons.access_time_rounded,
+            '${cartProvider.nearExpiryCount}',
+            'Near',
           ),
           Container(width: 1, height: 30, color: Colors.white30),
-          HoverTooltip(
-            message: 'Items past expiry date',
-            child: _statItem(Icons.warning_amber_rounded,
-                '${cartProvider.expiredCount}', 'Expired'),
+          _statItem(
+            Icons.warning_amber_rounded,
+            '${cartProvider.expiredCount}',
+            'Expired',
           ),
         ],
       ),
@@ -259,8 +420,7 @@ class CartScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildWarningBanner(
-      BuildContext context, CartProvider cartProvider) {
+  Widget _buildWarningBanner(CartProvider cartProvider) {
     final expCount = cartProvider.expiredCount;
     final nearCount = cartProvider.nearExpiryCount;
     final parts = <String>[];
@@ -277,16 +437,20 @@ class CartScreen extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.info_outline_rounded,
-              size: 20, color: Colors.orange),
+          const Icon(
+            Icons.info_outline_rounded,
+            size: 20,
+            color: Colors.orange,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              '⚠ ${parts.join(' & ')} item${(expCount + nearCount) > 1 ? 's' : ''} in cart',
+              '${parts.join(' & ')} item${(expCount + nearCount) > 1 ? 's' : ''} in cart',
               style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.orange),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: Colors.orange,
+              ),
             ),
           ),
         ],
@@ -295,6 +459,11 @@ class CartScreen extends StatelessWidget {
   }
 
   Widget _buildBottomBar(BuildContext context, CartProvider cartProvider) {
+    final bool checkoutDisabled =
+        cartProvider.items.isEmpty ||
+        cartProvider.hasExpiredItems ||
+        _isClearing;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
       decoration: BoxDecoration(
@@ -316,15 +485,24 @@ class CartScreen extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Total',
+                  'Subtotal: Rs ${cartProvider.subtotal.toStringAsFixed(2)}',
                   style: GoogleFonts.poppins(
-                      fontSize: 13, color: Colors.white54),
+                    fontSize: 13,
+                    color: Colors.white54,
+                  ),
+                ),
+                Text(
+                  'Tax: Rs ${cartProvider.tax.toStringAsFixed(2)}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.white54,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '₹${cartProvider.totalPrice.toStringAsFixed(2)}',
+                  'Total: Rs ${cartProvider.total.toStringAsFixed(2)}',
                   style: GoogleFonts.orbitron(
-                    fontSize: 24,
+                    fontSize: 20,
                     fontWeight: FontWeight.w800,
                     color: const Color(0xFF6C63FF),
                   ),
@@ -332,35 +510,181 @@ class CartScreen extends StatelessWidget {
               ],
             ),
             const Spacer(),
-            HoverTooltip(
-              message: 'Proceed to checkout',
-              scaleOnHover: 1.05,
-              child: FilledButton.icon(
-                onPressed: cartProvider.items.isEmpty
-                    ? null
-                    : () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const CheckoutScreen(),
-                          ),
-                        );
-                      },
-                icon: const Icon(Icons.shopping_bag_rounded),
-                label: const Text(
-                  'Checkout',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-                ),
-                style: FilledButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (cartProvider.hasExpiredItems)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      'Remove expired items to checkout',
+                      style: GoogleFonts.poppins(
+                        color: Colors.redAccent,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                HoverTooltip(
+                  message: cartProvider.hasExpiredItems
+                      ? 'Checkout disabled due to expired items'
+                      : 'Proceed to checkout',
+                  scaleOnHover: 1.05,
+                  child: FilledButton.icon(
+                    onPressed: checkoutDisabled
+                        ? null
+                        : () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const CheckoutScreen(),
+                              ),
+                            );
+                          },
+                    icon: const Icon(Icons.shopping_bag_rounded),
+                    label: const Text(
+                      'Checkout',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
+                    ),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 28,
+                        vertical: 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCartItemCard({
+    required CartItem item,
+    required bool busy,
+    required VoidCallback onDecrement,
+    required VoidCallback onIncrement,
+    required VoidCallback onDelete,
+  }) {
+    final status = ExpiryUtils.getExpiryStatus(item.expiry);
+    final statusColor = ExpiryUtils.getStatusColor(status);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.inventory_2_rounded,
+              color: statusColor,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'ID: ${item.id} | Exp: ${item.expiry}',
+                  style: GoogleFonts.poppins(
+                    color: Colors.white38,
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: busy ? null : onDecrement,
+                      icon: const Icon(Icons.remove_circle_outline_rounded),
+                      color: Colors.white70,
+                      tooltip: 'Decrease quantity',
+                    ),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      transitionBuilder: (child, animation) =>
+                          ScaleTransition(scale: animation, child: child),
+                      child: Text(
+                        '${item.quantity}',
+                        key: ValueKey('${item.id}-${item.quantity}'),
+                        style: GoogleFonts.orbitron(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: busy ? null : onIncrement,
+                      icon: const Icon(Icons.add_circle_outline_rounded),
+                      color: const Color(0xFF6C63FF),
+                      tooltip: 'Increase quantity',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'Rs ${(item.price * item.quantity).toStringAsFixed(2)}',
+                style: GoogleFonts.orbitron(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              IconButton(
+                onPressed: busy ? null : onDelete,
+                icon: busy
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.delete_outline_rounded),
+                color: Colors.redAccent,
+                tooltip: 'Remove item',
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

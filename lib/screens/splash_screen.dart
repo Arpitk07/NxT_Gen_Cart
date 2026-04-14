@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../config/firebase_config.dart';
 import 'login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -46,15 +45,14 @@ class _SplashScreenState extends State<SplashScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
-    _textFade = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _textController, curve: Curves.easeIn),
-    );
-    _textSlide = Tween<Offset>(
-      begin: const Offset(0, 0.5),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _textController, curve: Curves.easeOutCubic),
-    );
+    _textFade = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _textController, curve: Curves.easeIn));
+    _textSlide = Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero)
+        .animate(
+          CurvedAnimation(parent: _textController, curve: Curves.easeOutCubic),
+        );
 
     _orbController = AnimationController(
       vsync: this,
@@ -79,7 +77,6 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _initializeApp() async {
     try {
-      await FirebaseConfig.initializeFirebase();
       await Future.delayed(const Duration(seconds: 3));
 
       if (mounted) {
@@ -105,7 +102,7 @@ class _SplashScreenState extends State<SplashScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Initialization error: $e'),
+            content: Text('Startup error: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -248,8 +245,9 @@ class _SplashScreenState extends State<SplashScreen>
                       child: const LinearProgressIndicator(
                         minHeight: 4,
                         backgroundColor: Color(0xFF2A2A4A),
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(Color(0xFF6C63FF)),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Color(0xFF6C63FF),
+                        ),
                       ),
                     ),
                   ),
@@ -269,10 +267,7 @@ class _SplashScreenState extends State<SplashScreen>
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: RadialGradient(
-          colors: [
-            color.withValues(alpha: 0.25),
-            color.withValues(alpha: 0.0),
-          ],
+          colors: [color.withValues(alpha: 0.25), color.withValues(alpha: 0.0)],
         ),
       ),
     );

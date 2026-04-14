@@ -1,32 +1,38 @@
 class CartItem {
-  final String productId;
-  final String productName;
-  final double mrp;
-  final String expiryDate;
+  final String id;
+  final String name;
+  final double price;
+  final String expiry;
+  final int quantity;
+  final int timestamp;
 
   CartItem({
-    required this.productId,
-    required this.productName,
-    required this.mrp,
-    required this.expiryDate,
+    required this.id,
+    required this.name,
+    required this.price,
+    required this.expiry,
+    required this.quantity,
+    required this.timestamp,
   });
 
-  /// Parse a single flat snapshot from the root node
-  factory CartItem.fromMap(Map<dynamic, dynamic> map) {
+  factory CartItem.fromMap(String id, Map<dynamic, dynamic> map) {
     return CartItem(
-      productId: (map['Product ID'] ?? '').toString(),
-      productName: (map['Product name'] ?? '').toString(),
-      mrp: double.tryParse(map['MRP']?.toString() ?? '0') ?? 0.0,
-      expiryDate: (map['Expiry Date'] ?? '').toString(),
+      id: id,
+      name: (map['name'] ?? '').toString(),
+      price: double.tryParse(map['price']?.toString() ?? '0') ?? 0.0,
+      expiry: (map['expiry'] ?? '').toString(),
+      quantity: int.tryParse(map['quantity']?.toString() ?? '1') ?? 1,
+      timestamp: int.tryParse(map['timestamp']?.toString() ?? '0') ?? 0,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'Product ID': productId,
-      'Product name': productName,
-      'MRP': mrp.toString(),
-      'Expiry Date': expiryDate,
+      'name': name,
+      'price': price,
+      'expiry': expiry,
+      'quantity': quantity,
+      'timestamp': timestamp,
     };
   }
 }
