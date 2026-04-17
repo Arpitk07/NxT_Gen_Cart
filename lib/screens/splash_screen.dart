@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../utils/app_theme.dart';
 import 'login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -14,11 +15,12 @@ class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
   late AnimationController _logoController;
   late AnimationController _textController;
-  late AnimationController _orbController;
+  late AnimationController _bgController;
   late Animation<double> _logoScale;
   late Animation<double> _logoRotate;
   late Animation<double> _textFade;
   late Animation<Offset> _textSlide;
+  late Animation<double> _badgeFade;
 
   @override
   void initState() {
@@ -40,26 +42,30 @@ class _SplashScreenState extends State<SplashScreen>
         curve: const Interval(0.0, 0.8, curve: Curves.easeOutBack),
       ),
     );
+    _badgeFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _logoController,
+        curve: const Interval(0.6, 1.0, curve: Curves.easeIn),
+      ),
+    );
 
     _textController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
-    _textFade = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _textController, curve: Curves.easeIn));
+    _textFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _textController, curve: Curves.easeIn),
+    );
     _textSlide = Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero)
         .animate(
-          CurvedAnimation(parent: _textController, curve: Curves.easeOutCubic),
-        );
+      CurvedAnimation(parent: _textController, curve: Curves.easeOutCubic),
+    );
 
-    _orbController = AnimationController(
+    _bgController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 4),
+      duration: const Duration(seconds: 6),
     )..repeat(reverse: true);
 
-    // Stagger animations
     _logoController.forward().then((_) {
       _textController.forward();
     });
@@ -71,14 +77,13 @@ class _SplashScreenState extends State<SplashScreen>
   void dispose() {
     _logoController.dispose();
     _textController.dispose();
-    _orbController.dispose();
+    _bgController.dispose();
     super.dispose();
   }
 
   Future<void> _initializeApp() async {
     try {
       await Future.delayed(const Duration(seconds: 3));
-
       if (mounted) {
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
@@ -103,7 +108,7 @@ class _SplashScreenState extends State<SplashScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Startup error: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppTheme.errorRed,
           ),
         );
       }
@@ -115,42 +120,51 @@ class _SplashScreenState extends State<SplashScreen>
     return Scaffold(
       body: Stack(
         children: [
-          // Gradient background
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF1A1A2E),
-                  Color(0xFF16213E),
-                  Color(0xFF0F3460),
-                ],
-              ),
-            ),
+          // Deep dark background with subtle teal gradient
+          AnimatedBuilder(
+            animation: _bgController,
+            builder: (context, _) {
+              final v = _bgController.value;
+              return Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment(-1.0 + v * 0.3, -1.0),
+                    end: Alignment(1.0, 1.0 - v * 0.2),
+                    colors: const [
+                      Color(0xFF0A0A10),
+                      Color(0xFF0E0E18),
+                      Color(0xFF0A1520),
+                      Color(0xFF0B1A1A),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
 
-          // Animated background orbs
+          // Subtle ambient glow orbs
           AnimatedBuilder(
-            animation: _orbController,
+            animation: _bgController,
             builder: (context, _) {
-              final v = _orbController.value;
+              final v = _bgController.value;
               return Stack(
                 children: [
                   Positioned(
-                    top: 80 + math.sin(v * math.pi) * 30,
-                    right: 40 + math.cos(v * math.pi) * 20,
-                    child: _buildOrb(120, const Color(0xFF6C63FF)),
+                    top: MediaQuery.of(context).size.height * 0.15 +
+                        math.sin(v * math.pi) * 20,
+                    right: MediaQuery.of(context).size.width * 0.1,
+                    child: _buildOrb(140, const Color(0xFF7C3AED)),
                   ),
                   Positioned(
-                    bottom: 150 + math.cos(v * math.pi) * 25,
-                    left: 30 + math.sin(v * math.pi) * 15,
-                    child: _buildOrb(80, const Color(0xFFE94560)),
+                    bottom: MediaQuery.of(context).size.height * 0.1 +
+                        math.cos(v * math.pi) * 15,
+                    left: MediaQuery.of(context).size.width * 0.05,
+                    child: _buildOrb(100, const Color(0xFF0D9488)),
                   ),
                   Positioned(
-                    top: MediaQuery.of(context).size.height * 0.4,
-                    left: MediaQuery.of(context).size.width * 0.6,
-                    child: _buildOrb(60, const Color(0xFF533483)),
+                    bottom: MediaQuery.of(context).size.height * 0.25,
+                    right: MediaQuery.of(context).size.width * 0.15,
+                    child: _buildOrb(60, const Color(0xFF1A3A5C)),
                   ),
                 ],
               );
@@ -162,7 +176,7 @@ class _SplashScreenState extends State<SplashScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // 3D animated logo
+                // Cart icon with lightning badge
                 AnimatedBuilder(
                   animation: _logoController,
                   builder: (context, child) {
@@ -175,55 +189,113 @@ class _SplashScreenState extends State<SplashScreen>
                       child: child,
                     );
                   },
-                  child: Container(
-                    padding: const EdgeInsets.all(28),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFF6C63FF), Color(0xFFE94560)],
-                      ),
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF6C63FF).withValues(alpha: 0.4),
-                          blurRadius: 30,
-                          spreadRadius: 5,
+                  child: SizedBox(
+                    width: 120,
+                    height: 120,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        // Dark glass cart icon container
+                        Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1A1A2E),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.08),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.accentPurple.withValues(alpha: 0.2),
+                                blurRadius: 30,
+                                spreadRadius: 5,
+                              ),
+                            ],
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.shopping_cart_rounded,
+                              size: 48,
+                              color: AppTheme.accentPurpleLight,
+                            ),
+                          ),
+                        ),
+
+                        // Lightning bolt badge (cyan)
+                        Positioned(
+                          top: -4,
+                          right: 4,
+                          child: FadeTransition(
+                            opacity: _badgeFade,
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF00D4AA),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF00D4AA).withValues(alpha: 0.5),
+                                    blurRadius: 12,
+                                    spreadRadius: 2,
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.bolt_rounded,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                            ),
+                          ),
                         ),
                       ],
-                    ),
-                    child: const Icon(
-                      Icons.shopping_cart_rounded,
-                      size: 72,
-                      color: Colors.white,
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 36),
+                const SizedBox(height: 40),
 
-                // Animated title
+                // Animated title: NXT-GEN CART
                 SlideTransition(
                   position: _textSlide,
                   child: FadeTransition(
                     opacity: _textFade,
                     child: Column(
                       children: [
-                        Text(
-                          'NxT-Gen Cart',
-                          style: GoogleFonts.orbitron(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            letterSpacing: 3,
+                        RichText(
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'NXT-GEN ',
+                                style: GoogleFonts.inter(
+                                  fontSize: 42,
+                                  fontWeight: FontWeight.w800,
+                                  fontStyle: FontStyle.italic,
+                                  color: Colors.white,
+                                  letterSpacing: 2,
+                                ),
+                              ),
+                              TextSpan(
+                                text: 'CART',
+                                style: GoogleFonts.inter(
+                                  fontSize: 42,
+                                  fontWeight: FontWeight.w800,
+                                  fontStyle: FontStyle.italic,
+                                  color: AppTheme.accentPurpleLight,
+                                  letterSpacing: 2,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 14),
                         Text(
                           'SMART  •  FAST  •  FUTURISTIC',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: Colors.white54,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: AppTheme.accentPurpleLight,
                             letterSpacing: 4,
                             fontWeight: FontWeight.w500,
                           ),
@@ -233,25 +305,7 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
 
-                const SizedBox(height: 56),
 
-                // Loading indicator
-                FadeTransition(
-                  opacity: _textFade,
-                  child: SizedBox(
-                    width: 160,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: const LinearProgressIndicator(
-                        minHeight: 4,
-                        backgroundColor: Color(0xFF2A2A4A),
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Color(0xFF6C63FF),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -267,7 +321,10 @@ class _SplashScreenState extends State<SplashScreen>
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: RadialGradient(
-          colors: [color.withValues(alpha: 0.25), color.withValues(alpha: 0.0)],
+          colors: [
+            color.withValues(alpha: 0.15),
+            color.withValues(alpha: 0.0),
+          ],
         ),
       ),
     );

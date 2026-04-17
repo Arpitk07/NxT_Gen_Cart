@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
-import 'cart_screen.dart';
+import '../utils/app_theme.dart';
+import '../widgets/glass_container.dart';
+import '../widgets/product_card.dart';
+import '../widgets/stat_card.dart';
+import 'checkout_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -12,41 +15,26 @@ class DashboardScreen extends StatelessWidget {
     final cart = Provider.of<CartProvider>(context);
 
     return Scaffold(
+      backgroundColor: AppTheme.backgroundStart,
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          gradient: AppTheme.mainBackgroundGradient,
         ),
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(cart),
+              _buildHeader(context, cart),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildStoreCard(),
-
-                      const SizedBox(height: 20),
-
-                      _buildStats(cart),
-
-                      const SizedBox(height: 20),
-
-                      _buildSectionTitle("Live Cart"),
-
-                      const SizedBox(height: 10),
-
-                      _buildProducts(cart),
-
-                      const SizedBox(height: 20),
-
-                      _buildActions(context, cart),
+                      _buildStats(context, cart),
+                      const SizedBox(height: 32),
+                      _buildSectionTitle(context, "Products Overview"),
+                      const SizedBox(height: 16),
+                      _buildProductsList(cart),
                     ],
                   ),
                 ),
@@ -58,35 +46,122 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  // 🔥 HEADER WITH CONNECTION STATUS
-  Widget _buildHeader(CartProvider cart) {
+  // Header matching the reference: Title, Subtitle, SYNC DATA, Checkout button
+  Widget _buildHeader(BuildContext context, CartProvider cart) {
     return Padding(
       padding: const EdgeInsets.all(20),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.shopping_cart, color: Colors.white),
-          const SizedBox(width: 10),
-          Text(
-            "NxT-Gen Cart",
-            style: GoogleFonts.orbitron(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const Spacer(),
-
-          // 🔥 CONNECTION STATUS
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(
-                cart.error == null ? Icons.circle : Icons.error,
-                color: cart.error == null ? Colors.green : Colors.red,
-                size: 10,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "NxT-Gen Store",
+                      style: AppTheme.heading(context).copyWith(
+                        fontSize: 32,
+                        letterSpacing: -1,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Text(
+                          "Smart trolley connected",
+                          style: AppTheme.subheading(context).copyWith(
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        if (cart.error == null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppTheme.successGreen.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: AppTheme.successGreen.withValues(alpha: 0.5)),
+                            ),
+                            child: const Text(
+                              "LIVE",
+                              style: TextStyle(
+                                color: AppTheme.successGreen,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          )
+                        else
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppTheme.errorRed.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: AppTheme.errorRed.withValues(alpha: 0.5)),
+                            ),
+                            child: const Text(
+                              "OFFLINE",
+                              style: TextStyle(
+                                color: AppTheme.errorRed,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(width: 6),
-              Text(
-                cart.error == null ? "Connected" : "Error",
-                style: const TextStyle(color: Colors.white70),
+              Row(
+                children: [
+                  OutlinedButton(
+                    onPressed: () {
+                      cart.retryConnection();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.textMain,
+                      side: const BorderSide(color: AppTheme.glassBorder),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      backgroundColor: AppTheme.glassBackground,
+                    ),
+                    child: Text(
+                      "SYNC DATA",
+                      style: AppTheme.title(context).copyWith(fontSize: 12),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: cart.items.isEmpty
+                        ? null
+                        : () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const CheckoutScreen()),
+                            );
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.accentPurple,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      shadowColor: AppTheme.accentPurpleLight,
+                      elevation: 8,
+                    ),
+                    child: Text(
+                      "Checkout",
+                      style: AppTheme.title(context).copyWith(fontSize: 13, color: Colors.white),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -95,156 +170,110 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  // 🔥 STORE CARD
-  Widget _buildStoreCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF6C63FF), Color(0xFF533483)],
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: const [
-          Icon(Icons.store, color: Colors.white),
-          SizedBox(width: 10),
-          Text("NxT-Gen Store", style: TextStyle(color: Colors.white)),
-        ],
-      ),
-    );
-  }
-
-  // 🔥 STATS
-  Widget _buildStats(CartProvider cart) {
+  // Stats array overview
+  Widget _buildStats(BuildContext context, CartProvider cart) {
     return Row(
       children: [
         Expanded(
-          child: _statCard(
-            "Items",
-            "${cart.totalItems}",
-            Icons.inventory,
+          child: StatCard(
+            title: "TOTAL ITEMS",
+            value: "${cart.totalItems} units",
+            icon: Icons.inventory_2_outlined,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 16),
         Expanded(
-          child: _statCard(
-            "Value",
-            "₹${cart.totalPrice.toStringAsFixed(0)}",
-            Icons.currency_rupee,
+          child: StatCard(
+            title: "CART VALUE",
+            value: "₹${cart.totalPrice.toStringAsFixed(2)}",
+            icon: Icons.account_balance_wallet_outlined,
           ),
         ),
       ],
     );
   }
 
-  Widget _statCard(String title, String value, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white10,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: Colors.white),
-          const SizedBox(height: 8),
-          Text(value, style: const TextStyle(color: Colors.white)),
-          Text(title, style: const TextStyle(color: Colors.white54)),
-        ],
-      ),
-    );
-  }
-
-  // 🔥 TITLE
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(BuildContext context, String title) {
     return Text(
       title,
-      style: GoogleFonts.poppins(
-        color: Colors.white,
-        fontSize: 16,
-        fontWeight: FontWeight.w500,
-      ),
+      style: AppTheme.title(context).copyWith(fontSize: 20),
     );
   }
 
-  // 🔥 PRODUCT LIST (REAL-TIME)
-  Widget _buildProducts(CartProvider cart) {
-    if (cart.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (cart.items.isEmpty) {
-      return Center(
-        child: Column(
-          children: const [
-            Icon(Icons.shopping_cart_outlined,
-                size: 40, color: Colors.white38),
-            SizedBox(height: 10),
-            Text(
-              "Scan a product to begin",
-              style: TextStyle(color: Colors.white54),
-            ),
-          ],
+  Widget _buildProductsList(CartProvider cart) {
+    if (cart.isLoading && cart.items.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(40.0),
+        child: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.accentPurpleLight),
+          ),
         ),
       );
     }
 
+    if (cart.items.isEmpty) {
+      return _buildEmptyState();
+    }
+
     return Column(
+      key: ValueKey(cart.items.length),
       children: cart.items.map((item) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          decoration: BoxDecoration(
-            color: Colors.white10,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: ListTile(
-            leading:
-                const Icon(Icons.inventory_2, color: Colors.white),
-            title: Text(item.name,
-                style: const TextStyle(color: Colors.white)),
-            subtitle: Text(
-              "Qty: ${item.quantity}",
-              style: const TextStyle(color: Colors.white54),
-            ),
-            trailing: Text(
-              "₹${item.price}",
-              style: const TextStyle(color: Colors.white),
-            ),
-          ),
+        return ProductCard(
+          item: item,
+          busy: false,
+          isRecent: cart.isRecentlyAdded(item.id),
+          loadingSuggestions: cart.isSuggestionsLoading(item.id),
+          suggestions: cart.getSuggestionsFor(item.id),
+          onTapCard: () {},
+          onIncrement: () => cart.addOrIncrementItem(item, quantityIncrement: 1),
+          onDecrement: () => cart.decrementItem(item.id),
+          onDelete: () => cart.removeItem(item.id),
+          onTapSuggestion: (suggestion) => cart.addCatalogProduct(suggestion.id, quantityIncrement: 1),
         );
       }).toList(),
     );
   }
 
-  // 🔥 ACTION BUTTONS
-  Widget _buildActions(BuildContext context, CartProvider cart) {
-    return Row(
-      children: [
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CartScreen()),
-              );
-            },
-            icon: const Icon(Icons.shopping_cart),
-            label: const Text("View Cart"),
-          ),
+  Widget _buildEmptyState() {
+    return GlassContainer(
+      padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
+      child: Center(
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppTheme.accentPurple.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.shopping_cart_outlined,
+                size: 64,
+                color: AppTheme.accentPurpleLight,
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              "Products Overview",
+              style: TextStyle(
+                color: AppTheme.textMain,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              "Your virtual cart is currently empty. Start building your\npremium collection by scanning an item.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                height: 1.5,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: ElevatedButton.icon(
-            style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed:
-                cart.items.isEmpty ? null : () => cart.clearCart(),
-            icon: const Icon(Icons.delete),
-            label: const Text("Clear Cart"),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

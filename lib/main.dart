@@ -28,9 +28,18 @@ class NextGenCartApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,
-          colorSchemeSeed: const Color(0xFF6C63FF),
+          colorSchemeSeed: const Color(0xFF7C3AED),
           brightness: Brightness.dark,
           scaffoldBackgroundColor: const Color(0xFF1A1A2E),
+          pageTransitionsTheme: const PageTransitionsTheme(
+            builders: {
+              TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.windows: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.linux: CupertinoPageTransitionsBuilder(),
+            },
+          ),
           appBarTheme: AppBarTheme(
             centerTitle: true,
             elevation: 0,
@@ -56,6 +65,12 @@ class NextGenCartApp extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
+            ),
+          ),
+          filledButtonTheme: FilledButtonThemeData(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF7C3AED),
+              foregroundColor: Colors.white,
             ),
           ),
         ),

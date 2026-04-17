@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/cart_provider.dart';
+import '../services/stripe_checkout_service.dart';
+import '../utils/app_theme.dart';
 import '../utils/expiry_utils.dart';
-import '../widgets/hover_tooltip.dart';
+import '../widgets/glass_container.dart';
+import '../widgets/price_summary.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -14,87 +17,259 @@ class CheckoutScreen extends StatefulWidget {
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _isProcessing = false;
+  final StripeCheckoutService _stripeCheckoutService = StripeCheckoutService();
 
   Future<void> _handleCheckout(CartProvider provider) async {
     setState(() => _isProcessing = true);
     try {
-      await provider.checkout();
-      if (mounted) {
-        _showSuccessDialog();
+      final checkoutUrl = await _stripeCheckoutService.createCheckoutSession(
+        items: provider.items,
+        trolleyId: provider.trolleyId,
+        currency: 'inr',
+      );
+
+      final launched = await launchUrl(
+        Uri.parse(checkoutUrl),
+        mode: LaunchMode.platformDefault,
+      );
+
+      if (!launched) {
+        throw StateError('Could not open Stripe Checkout. Please try again.');
       }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isProcessing = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Checkout failed: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppTheme.accentPurple,
+          content: Row(
+            children: const [
+              Icon(Icons.lock_outline_rounded, color: Colors.white),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Stripe checkout opened. Complete payment to finalize your order.',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
           ),
-        );
-      }
+        ),
+      );
+      setState(() => _isProcessing = false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isProcessing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppTheme.errorRed,
+          content: Text('Checkout failed: $e', style: const TextStyle(color: Colors.white)),
+        ),
+      );
     }
   }
 
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => Dialog(
-        backgroundColor: const Color(0xFF16213E),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Padding(
-          padding: const EdgeInsets.all(28),
+  @override
+  Widget build(BuildContext context) {
+    final cartProvider = Provider.of<CartProvider>(context);
+    final bool hasExpiredItems = cartProvider.hasExpiredItems;
+
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundStart,
+      appBar: AppBar(
+        title: Text('Secure Checkout', style: AppTheme.heading(context).copyWith(fontSize: 20)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppTheme.textMain),
+        centerTitle: true,
+      ),
+      extendBodyBehindAppBar: true,
+      body: Container(
+        decoration: const BoxDecoration(gradient: AppTheme.mainBackgroundGradient),
+        child: SafeArea(
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.check_circle_rounded,
-                  size: 64,
-                  color: Colors.greenAccent,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Payment Successful!',
-                style: GoogleFonts.orbitron(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Trolley status has been set to PAID.\nThank you for shopping!',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(fontSize: 13, color: Colors.white54),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: HoverTooltip(
-                  message: 'Return to dashboard',
-                  scaleOnHover: 1.05,
-                  child: FilledButton(
-                    onPressed: () {
-                      Navigator.of(ctx).pop();
-                      Navigator.of(context).pop();
-                    },
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF6C63FF),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.purpleGradient,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.accentPurple.withValues(alpha: 0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 36),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Order Summary',
+                            style: AppTheme.heading(context).copyWith(fontSize: 22, color: Colors.white),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            '${cartProvider.totalItems} unit${cartProvider.totalItems == 1 ? '' : 's'} ready for payment',
+                            style: AppTheme.body(context).copyWith(color: Colors.white70),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: Text(
-                      'Done',
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                    const SizedBox(height: 24),
+                    Text(
+                      "Items Overview",
+                      style: AppTheme.title(context).copyWith(fontSize: 18),
+                    ),
+                    const SizedBox(height: 12),
+                    ...cartProvider.items.map((item) {
+                      final status = ExpiryUtils.getExpiryStatus(item.expiry);
+                      final isExpired = status == ExpiryStatus.expired;
+                      final borderColor = isExpired ? AppTheme.errorRed : AppTheme.glassBorder;
+                      final accentColor = isExpired ? AppTheme.errorRed : AppTheme.accentPurple;
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: GlassContainer(
+                          padding: const EdgeInsets.all(12),
+                          borderColor: borderColor,
+                          child: Row(
+                            children: [
+                              _CheckoutImage(imageUrl: item.imageUrl),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.name,
+                                      style: AppTheme.title(context).copyWith(fontSize: 15),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Qty: ${item.quantity}  •  Exp: ${item.expiry}',
+                                      style: AppTheme.body(context).copyWith(fontSize: 12),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: accentColor.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        ExpiryUtils.getStatusText(status),
+                                        style: TextStyle(
+                                          color: accentColor,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                '₹${(item.price * item.quantity).toStringAsFixed(2)}',
+                                style: AppTheme.price(context).copyWith(color: AppTheme.accentPurpleLight),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 16),
+                    PriceSummary(
+                      subtotal: cartProvider.subtotal,
+                      tax: cartProvider.tax,
+                      total: cartProvider.total,
+                    ),
+                    if (hasExpiredItems) ...[
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.errorRed.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppTheme.errorRed.withValues(alpha: 0.5)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.warning_amber_rounded, color: AppTheme.errorRed, size: 28),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Checkout is blocked. Please remove expired items from the cart first.',
+                                style: AppTheme.body(context).copyWith(
+                                  color: AppTheme.errorRed,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              GlassContainer(
+                borderRadius: 0,
+                opacity: 0.1,
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        if (!hasExpiredItems)
+                          BoxShadow(
+                            color: AppTheme.accentPurple.withValues(alpha: 0.4),
+                            blurRadius: 24,
+                            spreadRadius: 2,
+                            offset: const Offset(0, 4),
+                          ),
+                      ],
+                    ),
+                    child: ElevatedButton.icon(
+                      onPressed: _isProcessing || hasExpiredItems
+                          ? null
+                          : () => _handleCheckout(cartProvider),
+                      icon: _isProcessing
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.verified_user_outlined, size: 22, color: Colors.white),
+                      label: Text(
+                        _isProcessing ? 'Opening Stripe Checkout...' : 'Pay Securely with Stripe',
+                        style: AppTheme.title(context).copyWith(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: hasExpiredItems ? AppTheme.glassBorder : AppTheme.accentPurple,
+                        disabledBackgroundColor: AppTheme.glassBorder,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 0,
+                      ),
                     ),
                   ),
                 ),
@@ -105,335 +280,51 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ),
     );
   }
+}
+
+class _CheckoutImage extends StatelessWidget {
+  final String imageUrl;
+
+  const _CheckoutImage({required this.imageUrl});
 
   @override
   Widget build(BuildContext context) {
-    final cartProvider = Provider.of<CartProvider>(context);
+    if (imageUrl.trim().isEmpty) {
+      return _placeholder();
+    }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF1A1A2E),
-        title: Text(
-          'Checkout',
-          style: GoogleFonts.orbitron(
-            fontWeight: FontWeight.w700,
-            fontSize: 18,
-            color: Colors.white,
-          ),
-        ),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                // Order Summary Header
-                HoverTooltip(
-                  message: 'Your order overview',
-                  scaleOnHover: 1.02,
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF6C63FF), Color(0xFF533483)],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
-                      children: [
-                        const Icon(
-                          Icons.receipt_long_rounded,
-                          size: 40,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Order Summary',
-                          style: GoogleFonts.orbitron(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${cartProvider.totalItems} item${cartProvider.totalItems != 1 ? 's' : ''} in cart',
-                          style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            color: Colors.white70,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Items List
-                ...cartProvider.items.map((item) {
-                  final status = ExpiryUtils.getExpiryStatus(item.expiry);
-                  final statusColor = ExpiryUtils.getStatusColor(status);
-                  return HoverTooltip(
-                    message:
-                        '${item.name.isNotEmpty ? item.name : "Unknown"} - Exp: ${item.expiry.isNotEmpty ? item.expiry : "N/A"}',
-                    scaleOnHover: 1.02,
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.08),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: statusColor.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(
-                              Icons.inventory_2_rounded,
-                              size: 20,
-                              color: statusColor,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item.name.isNotEmpty ? item.name : 'Unknown',
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                Text(
-                                  'ID: ${item.id}  •  Qty: ${item.quantity}',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    color: Colors.white38,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Text(
-                            '₹${(item.price * item.quantity).toStringAsFixed(2)}',
-                            style: GoogleFonts.orbitron(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF6C63FF),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-
-                const SizedBox(height: 8),
-
-                // Price breakdown
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Column(
-                    children: [
-                      _priceRow(
-                        'Subtotal',
-                        '₹${cartProvider.subtotal.toStringAsFixed(2)}',
-                      ),
-                      const SizedBox(height: 8),
-                      _priceRow(
-                        'Tax (${(cartProvider.taxRate * 100).toStringAsFixed(0)}%)',
-                        '₹${cartProvider.tax.toStringAsFixed(2)}',
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        child: Divider(
-                          color: Colors.white.withValues(alpha: 0.1),
-                        ),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Total',
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                          ),
-                          Text(
-                            '₹${cartProvider.total.toStringAsFixed(2)}',
-                            style: GoogleFonts.orbitron(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFF6C63FF),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Expiry warning
-                if (cartProvider.hasExpiredItems) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.red.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(
-                          Icons.block_rounded,
-                          color: Colors.redAccent,
-                          size: 20,
-                        ),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Checkout blocked: cart contains expired items.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.redAccent,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ] else if (cartProvider.hasExpiryWarnings) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.orange.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.warning_amber_rounded,
-                          color: Colors.orange,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Some items are expired or near expiry. Please review before confirming.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.orange[800],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-
-          // Bottom confirm button
-          Container(
-            padding: const EdgeInsets.fromLTRB(24, 14, 24, 24),
-            decoration: BoxDecoration(
-              color: const Color(0xFF16213E),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  offset: const Offset(0, -4),
-                  blurRadius: 12,
-                ),
-              ],
-            ),
-            child: SafeArea(
-              child: SizedBox(
-                width: double.infinity,
-                child: HoverTooltip(
-                  message: _isProcessing
-                      ? 'Payment in progress'
-                      : 'Complete your purchase',
-                  scaleOnHover: 1.05,
-                  child: FilledButton.icon(
-                    onPressed: _isProcessing || cartProvider.hasExpiredItems
-                        ? null
-                        : () => _handleCheckout(cartProvider),
-                    icon: _isProcessing
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Icon(Icons.payment_rounded),
-                    label: Text(
-                      _isProcessing ? 'Processing...' : 'Confirm & Pay',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: cartProvider.hasExpiredItems
-                          ? Colors.grey
-                          : Colors.green,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Image.network(
+        imageUrl,
+        width: 64,
+        height: 64,
+        fit: BoxFit.cover,
+        frameBuilder: (_, child, frame, __) {
+          return AnimatedOpacity(
+            duration: const Duration(milliseconds: 220),
+            opacity: frame == null ? 0 : 1,
+            child: child,
+          );
+        },
+        loadingBuilder: (_, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return _placeholder();
+        },
+        errorBuilder: (_, __, ___) => _placeholder(),
       ),
     );
   }
 
-  Widget _priceRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.poppins(fontSize: 14, color: Colors.white54),
-        ),
-        Text(
-          value,
-          style: GoogleFonts.poppins(fontSize: 14, color: Colors.white),
-        ),
-      ],
+  Widget _placeholder() {
+    return Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        color: AppTheme.glassBackground,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: const Icon(Icons.image_not_supported_rounded, color: AppTheme.textMuted),
     );
   }
 }

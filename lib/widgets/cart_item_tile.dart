@@ -112,7 +112,7 @@ class CartItemTile extends StatelessWidget {
                             ),
                             const SizedBox(width: 10),
                             Text(
-                              'Qty: ${item.quantity}',
+                              'Present',
                               style: GoogleFonts.poppins(
                                 color: Colors.white54,
                                 fontSize: 12,
@@ -128,7 +128,7 @@ class CartItemTile extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '₹${(item.price * item.quantity).toStringAsFixed(2)}',
+                        '₹${item.price.toStringAsFixed(2)}',
                         style: GoogleFonts.orbitron(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -228,13 +228,13 @@ class CartItemTile extends StatelessWidget {
             ),
             _detailRow(
               Icons.shopping_bag_rounded,
-              'Quantity',
-              '${item.quantity}',
+              'Status',
+              'Present in cart',
             ),
             _detailRow(
               Icons.currency_rupee_rounded,
-              'Line Total',
-              '₹${(item.price * item.quantity).toStringAsFixed(2)}',
+              'Price',
+              '₹${item.price.toStringAsFixed(2)}',
             ),
             _detailRow(Icons.event_outlined, 'Expiry Date', item.expiry),
             const SizedBox(height: 12),
